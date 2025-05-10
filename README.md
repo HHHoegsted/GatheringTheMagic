@@ -5,7 +5,7 @@ I made this project as a final project in a course on advanced C#.
 You don't need an account to get the cards from the official MTG database, and if you use the attached python script you'll not overuse the API. It'll take a couple of hours to finish,
 because of the added delays.
 
-When you use the python script included, you populate a database in .\SQLEXPRESS with card data.
+When you use the python script included, you populate a database in .\SQLEXPRESS with card data for 500 cards. It is possible to get ALL cards by changing the while loop to while(true).
 
 You can then run the main project - a blazor WASM project that shows the cards in the database, with sorting on color and (MTG) sets.
 
