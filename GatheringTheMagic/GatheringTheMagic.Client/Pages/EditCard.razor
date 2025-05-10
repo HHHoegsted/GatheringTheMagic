@@ -1,0 +1,129 @@
+﻿@page "/editcard/{CardId}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@using GatheringTheMagic.Client.Models
+@using System.Net.Http.Json
+
+<h3>Edit Card</h3>
+
+@if (_isLoading)
+{
+    <p>Loading card...</p>
+}
+else if (_cardNotFound)
+{
+    <div class="alert alert-danger">Card not found.</div>
+}
+else
+{
+    <EditForm Model="_card" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="_card.Name" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Image URL</label>
+            <InputText class="form-control" @bind-Value="_card.ImageUrl" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Mana cost</label>
+            <InputText class="form-control" @bind-Value="_card.ManaCost" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Type</label>
+            <InputText class="form-control" @bind-Value="_card.Type" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Rarity</label>
+            <InputText class="form-control" @bind-Value="_card.Rarity" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Card Text</label>
+            <InputTextArea class="form-control" @bind-Value="_card.Text" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Power (optional)</label>
+            <InputText class="form-control" @bind-Value="_card.Power" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Toughness (optional)</label>
+            <InputText class="form-control" @bind-Value="_card.Toughness" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Artist</label>
+            <InputText class="form-control" @bind-Value="_card.Artist" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update Card</button>
+        <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+        @responseTxt
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string CardId { get; set; }
+
+    private NewCard _card = new();
+    private string responseTxt = string.Empty;
+    private bool _isLoading = true;
+    private bool _cardNotFound = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _card = await Http.GetFromJsonAsync<NewCard>($"api/Cards/{CardId}");
+            if (_card == null)
+            {
+                _cardNotFound = true;
+            }
+        }
+        catch
+        {
+            _cardNotFound = true;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        responseTxt = "Updating card...";
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/Cards/{_card.Id}", _card);
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/cards");
+            }
+            else
+            {
+                responseTxt = $"Error updating card. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            responseTxt = $"Exception: {ex.Message}";
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/cards");
+    }
+}

@@ -1,0 +1,141 @@
+﻿@using GatheringTheMagic.Client.Models
+@using System.Net.Http.Json;
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@page "/card/{id}"
+
+@if (_isLoading)
+{
+    <h3>Loading Card...</h3>
+}
+else if (_card is null)
+{
+    <h3>Card not found.</h3>
+}
+else
+{
+    <div class="card mt-4 shadow-lg" style="max-width: 800px;">
+        <div class="row g-0">
+            <div class="col-md-4">
+                @if (!string.IsNullOrWhiteSpace(_card.ImageUrl))
+                {
+                    <img src="@_card.ImageUrl" class="img-fluid rounded-start" alt="@_card.Name" />
+                }
+                else
+                {
+                    <div class="d-flex align-items-center justify-content-center bg-secondary text-white" style="height:100%; min-height:300px;">
+                        <span>No Image</span>
+                    </div>
+                }
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    <h3 class="card-title">@_card.Name</h3>
+                    
+                    @if (!string.IsNullOrWhiteSpace(_card.ManaCost))
+                    {
+                        <p class="text-muted">
+                            <strong>Mana Cost:</strong>
+                            @RenderManaSymbols(_card.ManaCost)
+                        </p>
+                    }
+                    
+                    <p><strong>Type:</strong> @_card.Type</p>
+                    <p><strong>Rarity:</strong> @_card.Rarity</p>
+                    <p><strong>Set:</strong> @_card.SetName (@_card.SetCode)</p>
+                    @if (!string.IsNullOrWhiteSpace(_card.Text))
+                    {
+                        <p><strong>Card Text:</strong> @_card.Text</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_card.Power) || !string.IsNullOrWhiteSpace(_card.Toughness))
+                    {
+                        <p><strong>Power/Toughness:</strong> @_card.Power / @_card.Toughness</p>
+                    }
+                    <p><strong>Artist:</strong> @_card.Artist</p>
+                    <p><strong>Collector Number:</strong> @_card.Number</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <NavLink class="btn btn-primary" href="@($"/editcard/{_card.Id}")">
+        Edit Card
+    </NavLink>
+    <button type="button" class="btn btn-danger ms-2" @onclick="DeleteCard">
+        Delete this card
+    </button>
+}
+
+<div class="mt-3">
+    <NavLink href="/cards" class="btn btn-info">Back to Cards</NavLink>
+</div>
+@responseTxt
+
+
+@code {
+	private bool _isLoading = false;
+	private FullCard? _card;
+    private string responseTxt ="";
+
+	[Parameter]
+	public string id { get; set; } = string.Empty;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadDataAsync();
+	}
+
+	private async Task LoadDataAsync()
+	{
+		_isLoading = true;
+
+		_card = await Http.GetFromJsonAsync<FullCard>($"api/cards/{id}");
+
+		_isLoading = false;
+	}
+
+    private MarkupString RenderManaSymbols(string? manaCost)
+    {
+        if (string.IsNullOrWhiteSpace(manaCost))
+            return new MarkupString("");
+
+        var output = new System.Text.StringBuilder();
+        var matches = System.Text.RegularExpressions.Regex.Matches(manaCost, @"\{(.*?)\}");
+
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            var symbol = match.Groups[1].Value.ToUpperInvariant();
+
+            var formattedSymbol = symbol.Replace("/", "").Replace("∞", "infinity").Replace("½", "half");
+
+            var url = $"https://svgs.scryfall.io/card-symbols/{formattedSymbol}.svg";
+
+            output.Append($"<img src='{url}' alt='{symbol}' style='height: 1em; vertical-align: middle; margin-right: 2px;' />");
+        }
+
+        return new MarkupString(output.ToString());
+    }
+    private async Task DeleteCard()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{_card.Name}'?");
+        if (!confirmed)
+            return;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/Cards/{_card.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/cards");
+            }
+            else
+            {
+                responseTxt = $"Failed to delete card. You cannot delete non-homebrew cards";
+            }
+        }
+        catch (Exception ex)
+        {
+            responseTxt = $"Exception during delete: {ex.Message}";
+        }
+    }
+}

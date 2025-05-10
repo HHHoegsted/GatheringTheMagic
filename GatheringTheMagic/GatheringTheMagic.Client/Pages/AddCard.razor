@@ -1,0 +1,122 @@
+﻿@inject HttpClient Http
+@inject NavigationManager Navigation
+@using GatheringTheMagic.Client.Models
+@using System.Text
+@inject IJSRuntime JS
+
+@page "/addcard"
+
+<h3>Create new card</h3>
+
+<EditForm Model="_newCard" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <InputText class="form-control" @bind-Value="_newCard.Name" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Image URL</label>
+        <InputText class="form-control" @bind-Value="_newCard.ImageUrl" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Mana cost</label>
+        <InputText class="form-control" @bind-Value="_newCard.ManaCost" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Type</label>
+        <InputText class="form-control" @bind-Value="_newCard.Type" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Rarity</label>
+        <InputText class="form-control" @bind-Value="_newCard.Rarity" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Card Text</label>
+        <InputTextArea class="form-control" @bind-Value="_newCard.Text" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Power (optional)</label>
+        <InputText class="form-control" @bind-Value="_newCard.Power" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Toughness (optional)</label>
+        <InputText class="form-control" @bind-Value="_newCard.Toughness" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Artist</label>
+        <InputText class="form-control" @bind-Value="_newCard.Artist" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Card</button>
+    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+    @responseTxt
+</EditForm>
+
+
+
+@code {
+    private NewCard _newCard = new();
+    private string responseTxt = "Testing";
+    private static readonly Random _random = new();
+
+    private async Task HandleValidSubmit()
+    {
+        responseTxt = "submitting...";
+        _newCard.Id = GenerateHomebrewCardId();
+        try
+        {
+            await JS.InvokeVoidAsync("console.log", "Sending card data:", _newCard);
+            var response = await Http.PostAsJsonAsync("api/Cards", _newCard);
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/cards");
+            }
+            else
+            {
+                responseTxt = $"Error saving card. Status: {response.Content} {response.StatusCode} {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            responseTxt = $"Exception: {ex.Message}";
+        }
+    }
+  
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/cards");
+    }
+
+    public static string GenerateHomebrewCardId()
+    {
+        string segment1 = RandomHex(8);
+        string segment2 = RandomHex(4);
+        string segment3 = "hbr" + RandomHex(1);
+        string segment4 = RandomHex(4);
+        string segment5 = RandomHex(12);
+
+        return $"{segment1}-{segment2}-{segment3}-{segment4}-{segment5}";
+    }
+
+    private static string RandomHex(int length)
+    {
+        var sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++)
+        {
+            int val = _random.Next(16);
+            sb.Append(val.ToString("x"));
+        }
+        return sb.ToString();
+    }
+}
